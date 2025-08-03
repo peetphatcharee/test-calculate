@@ -1,98 +1,114 @@
-const api = "https://sopon007.github.io/sample.github.io/test.json";
-
-
-
+// const api = "https://sopon007.github.io/sample.github.io/test.json";
+  const fishes = [
+        { name: "ปลาแซลม่อน", detail: { price: 50, quantity: 4, expired: "2025-08-30T00:00:00" } },
+        { name: "ปลาช่อน", detail: { price: 10, quantity: 5, expired: "2025-08-23T00:00:00" } },
+        { name: "ปลาทู", detail: { price: 5, quantity: 5, expired: "2025-08-24T00:00:00" } },
+        { name: "ปลานิล", detail: { price: 20, quantity: 5, expired: "2025-08-20T00:00:00" } },
+        { name: "ปลาหมอ", detail: { price: 1, quantity: 10, expired: "2025-08-21T00:00:00" } },
+      ];
 function calculate() {
-
-
-    const inputValue = parseFloat(document.getElementById("input").value);
-    console.log("Input value:", inputValue);
-    if (isNaN(inputValue) || inputValue > 1000) return alert("กรุณาใส่จำนวนเงินไม่เกิน 1000 บาท");
-
-    fetch(api).then(response => response.json()).then(data => {
-        console.log("Data fetched successfully:", data);
-        getData(data, inputValue);
-    }).catch(error => {
-        console.error("Error fetching data:", error);
-    });
-
+  const inputValue = parseFloat(document.getElementById("inputValue").value);
+  if (isNaN(inputValue) || inputValue > 1000)
+    return alert("กรุณาใส่จำนวนเงินไม่เกิน 1000 บาท");
+ getData(fishes, inputValue);
+//   fetch(api)
+//     .then((response) => response.json())
+//     .then((data) => {
+//       getData(data, inputValue);
+//     })
+//     .catch((error) => {
+//       console.error("Error fetching data:", error);
+//     });
 }
 
 function formatDate(dateStr) {
-    const d = new Date(dateStr);
-    return d.toLocaleDateString("th-TH");
+  const d = new Date(dateStr);
+  return d.toLocaleDateString("th-TH");
 }
 
 function getData(data, inputValue) {
-    const table = document.getElementById("resultTable");
-    const empty = document.getElementById("emptyMessage");
-    const resultBody = document.getElementById("resultBody");
-    const resultTotal = document.getElementById("resultTotal");
-    resultBody.innerHTML = "";
+  const table = document.getElementById("resultTable");
+  const empty = document.getElementById("emptyMessage");
+  const resultBody = document.getElementById("resultBody");
+  const resultTotal = document.getElementById("resultTotal");
+  resultBody.innerHTML = "";
+  resultTotal.innerHTML = "";
 
+//   table.style.display = "block";
+//   empty.style.display = "none";
 
-    table.style.display = "block";
-    empty.style.display = "none";
-    let remaining = inputValue;  // เงินคงเหลือ
+ 
+  let remaining = inputValue;
+  let totalBeforeDiscount = 0;
+  let totalDiscount = 0;
+  let rows = "";
 
-    let total = 0;                           // ราคาปลาทั้งหมดก่อนลด
-    let discount = 0;                        // ส่วนลดรวม
-    let rows = "";                           // HTML สำหรับ tbody
-    let salmonCount = 0;                     // จำนวนปลาแซลมอนที่ซื้อได้
+  let salmonCount = 0;
 
+ const validFish = data
+    .filter((f) => new Date(f.detail.expired) >= new Date())
+    .sort((a, b) => b.detail.price - a.detail.price);
 
-    const filterData = data.filter(f => new Date(f.detail.expired) >= new Date())
-        .sort((a, b) => b.detail.price - a.detail.price);
+  const purchases = [];
 
-    filterData.forEach((fish) => {
-        const expired = new Date(fish.detail.expired) < new Date(); // ตรวจสอบวันหมดอายุ
+  validFish.forEach((fish) => {
+    const price = fish.detail.price;
+    const qtyAvailable = fish.detail.quantity;
 
-        const price = fish.detail.price;
-        const qtyAvailable = fish.detail.quantity;
-        let buyQty = 0;
-        let itemTotal = 0;
-        let itemDiscount = 0;
+    let maxBuyQty = Math.min(Math.floor(remaining / price), qtyAvailable);
+    let itemTotal = maxBuyQty * price;
 
-        if (!expired) {
-            buyQty = Math.min(Math.floor(remaining / price), qtyAvailable);
-            itemTotal = buyQty * price;
-            remaining -= itemTotal;
-            total += itemTotal;
+    if (itemTotal <= remaining && maxBuyQty > 0) {
+      remaining -= itemTotal;
+      totalBeforeDiscount += itemTotal;
 
-            if (fish.name.includes("แซลม่อน")) {
-                salmonCount = buyQty;
-            }
-        }
+      if (fish.name.includes("แซลม่อน")) {
+        salmonCount += maxBuyQty;
+      }
 
+      purchases.push({
+        name: fish.name,
+        qty: maxBuyQty,
+        price: price,
+        total: itemTotal,
+        discount: 0, // ใส่ทีหลัง
+        expired: formatDate(fish.detail.expired),
+      });
+    }
+  });
 
-        // เงื่อนไขส่วนลด: ปลาแซลมอน ≥ 2 ตัว ลด 20 บาท
-        if (fish.name.includes("แซลม่อน") && buyQty >= 2) {
-            itemDiscount = 20;
-            discount += 20;
-        }
+  // ตรวจสอบส่วนลดแซลม่อน
+  if (salmonCount >= 2) {
+    const salmonItem = purchases.find((item) =>
+      item.name.includes("แซลม่อน")
+    );
+    if (salmonItem) {
+      salmonItem.discount = 20;
+      totalDiscount = 20;
+    }
+  }
 
-        // สร้างแถว HTML แสดงผลปลาแต่ละชนิด
-        rows += `<tr>
-  <td>${fish.name}</td>
-  <td>${buyQty}</td>
-  <td>${itemTotal} บาท</td>
-  <td>${itemDiscount ? itemDiscount + ' บาท' : '-'}</td>
-  <td>${formatDate(fish.detail.expired)}</td>
-</tr>`;
-    });
+  // แสดงผลลัพธ์ในตาราง
+  purchases.forEach((item) => {
+    rows += `
+      <tr>
+        <td>${item.name}</td>
+        <td>${item.qty} ตัว</td>
+        <td>${item.total} บาท</td>
+        <td>${item.discount} บาท</td>
+        <td>${item.expired}</td>
+      </tr>
+    `;
+  });
 
+  const net = totalBeforeDiscount - totalDiscount;
+  const change = inputValue - net;
 
-    // คำนวณยอดสุทธิ = ราคารวม - ส่วนลด
-    const net = total - discount;
-    // เงินทอน = เงินที่ใส่มา - ยอดสุทธิ
-    const change = inputValue - net;
-
-    // แสดงผลลัพธ์ทั้งหมด
-    $("#resultBody").html(rows);
-    $("#total").text(total);
-    $("#discount").text(discount);
-    $("#net").text(net);
-    $("#change").text(change < 0 ? 0 : change); // ถ้าขาดเงิน ให้แสดงเป็น 0
-
+  resultBody.innerHTML = rows;
+  resultTotal.innerHTML = `
+    <p>รวมเป็นเงินซื้อปลาทั้งสิ้น: ${totalBeforeDiscount} บาท</p>
+    <p>รวมได้ส่วนลด: ${totalDiscount} บาท</p>
+    <p>ยอดสุทธิ (หลังหักส่วนลด): ${net} บาท</p>
+    <p>เงินทอน: ${change < 0 ? 0 : change} บาท</p>
+  `;
 }
-$("#calculate").on("click", calculate);
