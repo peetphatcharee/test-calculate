@@ -1,52 +1,139 @@
 <!DOCTYPE html>
-<html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Document</title>
-    <link rel="stylesheet" href="./style.css" />
-    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-  </head>
-  <body>
-    <div class="container">
-      <div class="content">
-        <h1>Header</h1>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <title>ระบบคำนวณซื้อปลา</title>
 
-        <div>
-          <label for="input">Cash:</label>
-          <input type="text" id="input" />
-        </div>
-        <div class="btn-cal">
-          <button onclick="calculate()" type="button" id="calculate">
-            Calculate
-          </button>
-        </div>
-      </div>
+  <!-- โหลด jQuery จาก CDN -->
+  <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 
-      <div id="resultTable" style="display: none">
-        <table>
-          <thead>
-            <tr>
-              <th>ชนิดปลา</th>
-              <th>จำนวน</th>
-              <th>ราคา</th>
-              <th>ส่วนลด</th>
-              <th>วันหมดอายุ</th>
-            </tr>
-          </thead>
-          <tbody id="resultBody"></tbody>
-        </table>
-        <!-- แสดงผลลัพธ์สรุป -->
-        <p>ยอดรวมทั้งหมด: <span id="total">0</span> บาท</p>
-        <p>รวมส่วนลด: <span id="discount">0</span> บาท</p>
-        <p>ยอดสุทธิ: <span id="net">0</span> บาท</p>
-        <p>เงินทอน: <span id="change">0</span> บาท</p>
-      </div>
+  <style>
+    table { margin-top: 10px; border-collapse: collapse; }
+    th, td { padding: 5px 10px; border: 1px solid #aaa; }
+    .expired { color: red; } /* ถ้าหมดอายุให้แสดงเป็นสีแดง */
+  </style>
+</head>
+<body>
 
-      <div id="emptyMessage" style="display: block; margin-top: 2rem">
-        No results found.
-      </div>
-    </div>
-    <script src="script.js" defer></script>
-  </body>
+  <!-- ส่วนหัวของระบบ -->
+  <h2>ระบบคำนวณซื้อปลา</h2>
+
+  <!-- ช่องให้กรอกจำนวนเงิน -->
+  <label>จำนวนเงินที่มี (บาท): </label>
+  <input type="number" id="cash" />
+  <button id="calculate">คำนวณ</button>
+
+  <!-- ตารางแสดงผลรายการปลาที่ซื้อได้ -->
+  <table>
+    <thead>
+      <tr>
+        <th>ชนิดปลา</th>
+        <th>จำนวนที่ซื้อได้</th>
+        <th>จำนวนเงิน</th>
+        <th>ส่วนลด</th>
+        <th>วันหมดอายุ</th>
+      </tr>
+    </thead>
+    <tbody id="fish-list"></tbody> <!-- จะถูกเติมข้อมูลด้วย JS -->
+  </table>
+
+  <!-- แสดงผลลัพธ์สรุป -->
+  <p>ยอดรวมทั้งหมด: <span id="total">0</span> บาท</p>
+  <p>รวมส่วนลด: <span id="discount">0</span> บาท</p>
+  <p>ยอดสุทธิ: <span id="net">0</span> บาท</p>
+  <p>เงินทอน: <span id="change">0</span> บาท</p>
+
+  <script>
+    // ข้อมูลปลาทั้งหมด (เหมือน API response)
+    const fishes = [
+      { code: "001", name: "ปลาแซลม่อน", detail: { price: 50, quantity: 4, expired: "2025-08-30T00:00:00" } },
+      { code: "002", name: "ปลาช่อน", detail: { price: 10, quantity: 5, expired: "2025-08-23T00:00:00" } },
+      { code: "003", name: "ปลาทู", detail: { price: 5, quantity: 5, expired: "2025-08-24T00:00:00" } },
+      { code: "004", name: "ปลานิล", detail: { price: 20, quantity: 5, expired: "2025-08-20T00:00:00" } },
+      { code: "005", name: "ปลาหมอ", detail: { price: 1, quantity: 10, expired: "2025-08-21T00:00:00" } }
+    ];
+
+    // ฟังก์ชันเช็คว่าปลาหมดอายุหรือยัง
+    function isExpired(dateStr) {
+      const today = new Date();           // วันที่ปัจจุบัน
+      const expired = new Date(dateStr);  // วันที่หมดอายุของปลา
+      return expired < today;             // คืนค่า true ถ้าหมดอายุแล้ว
+    }
+
+    // ฟังก์ชันแปลงวันหมดอายุให้อ่านง่าย (เช่น 2025-07-20 → 20/07/2568)
+    function formatDate(dateStr) {
+      const d = new Date(dateStr);
+      return d.toLocaleDateString("th-TH");
+    }
+
+    // ฟังก์ชันหลักที่ทำการคำนวณทั้งหมดเมื่อกดปุ่ม
+    function calculatePurchase() {
+      let cash = parseFloat($("#cash").val()); // เงินที่ผู้ใช้ใส่เข้ามา
+      let remaining = cash;                    // เงินคงเหลือ
+      let total = 0;                           // ราคาปลาทั้งหมดก่อนลด
+      let discount = 0;                        // ส่วนลดรวม
+      let rows = "";                           // HTML สำหรับ tbody
+      let salmonCount = 0;                     // จำนวนปลาแซลมอนที่ซื้อได้
+
+      // เรียงปลาตามราคาจากแพงไปถูก
+      const sortedFishes = [...fishes].sort((a, b) => b.detail.price - a.detail.price);
+
+      // วนลูปปลาแต่ละตัว
+      sortedFishes.forEach(fish => {
+        const expired = isExpired(fish.detail.expired); // เช็คหมดอายุ
+        const price = fish.detail.price;
+        const qtyAvailable = fish.detail.quantity;
+
+        let buyQty = 0;     // จำนวนที่จะซื้อ
+        let itemTotal = 0;  // ราคารวมของปลาตัวนี้
+        let itemDiscount = 0; // ส่วนลดของปลาตัวนี้
+
+        // ถ้ายังไม่หมดอายุ
+        if (!expired) {
+          // คำนวณจำนวนซื้อได้ (ตามเงินที่เหลือและของในสต๊อก)
+          buyQty = Math.min(Math.floor(remaining / price), qtyAvailable);
+          itemTotal = buyQty * price;
+          remaining -= itemTotal; // หักเงิน
+          total += itemTotal;     // รวมเข้าราคารวม
+
+          // ถ้าเป็นปลาแซลมอน เก็บจำนวนไว้ตรวจส่วนลด
+          if (fish.name.includes("แซลม่อน")) {
+            salmonCount = buyQty;
+          }
+        }
+
+        // เงื่อนไขส่วนลด: ปลาแซลมอน ≥ 2 ตัว ลด 20 บาท
+        if (fish.name.includes("แซลม่อน") && buyQty >= 2) {
+          itemDiscount = 20;
+          discount += 20;
+        }
+
+        // สร้างแถว HTML แสดงผลปลาแต่ละชนิด
+        rows += `<tr class="${expired ? 'expired' : ''}">
+          <td>${fish.name}</td>
+          <td>${expired ? 0 : buyQty}</td>
+          <td>${expired ? 0 : itemTotal} บาท</td>
+          <td>${expired ? '-' : itemDiscount + ' บาท'}</td>
+          <td>${formatDate(fish.detail.expired)}${expired ? ' (หมดอายุ)' : ''}</td>
+        </tr>`;
+      });
+
+      // คำนวณยอดสุทธิ = ราคารวม - ส่วนลด
+      const net = total - discount;
+      // เงินทอน = เงินที่ใส่มา - ยอดสุทธิ
+      const change = cash - net;
+
+      // แสดงผลลัพธ์ทั้งหมด
+      $("#fish-list").html(rows);
+      $("#total").text(total);
+      $("#discount").text(discount);
+      $("#net").text(net);
+      $("#change").text(change < 0 ? 0 : change); // ถ้าขาดเงิน ให้แสดงเป็น 0
+    }
+
+    // เมื่อคลิกปุ่ม ให้เรียกฟังก์ชันคำนวณ
+    $("#calculate").on("click", calculatePurchase);
+  </script>
+
+</body>
 </html>

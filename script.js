@@ -41,27 +41,29 @@ function getData(data, inputValue) {
     let salmonCount = 0;                     // จำนวนปลาแซลมอนที่ซื้อได้
 
 
-    const resultArr = [];
-
     const filterData = data.filter(f => new Date(f.detail.expired) >= new Date())
         .sort((a, b) => b.detail.price - a.detail.price);
 
     filterData.forEach((fish) => {
+        const expired = new Date(fish.detail.expired) < new Date(); // ตรวจสอบวันหมดอายุ
+
         const price = fish.detail.price;
         const qtyAvailable = fish.detail.quantity;
         let buyQty = 0;
         let itemTotal = 0;
         let itemDiscount = 0;
 
-        buyQty = Math.min(Math.floor(remaining / price), qtyAvailable);
-        itemTotal = buyQty * price;
-        remaining -= itemTotal; // หักเงิน
-        total += itemTotal;     // รวมเข้าราคารวม
+        if (!expired) {
+            buyQty = Math.min(Math.floor(remaining / price), qtyAvailable);
+            itemTotal = buyQty * price;
+            remaining -= itemTotal;
+            total += itemTotal;
 
-        // ถ้าเป็นปลาแซลมอน เก็บจำนวนไว้ตรวจส่วนลด
-        if (fish.name.includes("แซลม่อน")) {
-            salmonCount = buyQty;
+            if (fish.name.includes("แซลม่อน")) {
+                salmonCount = buyQty;
+            }
         }
+
 
         // เงื่อนไขส่วนลด: ปลาแซลมอน ≥ 2 ตัว ลด 20 บาท
         if (fish.name.includes("แซลม่อน") && buyQty >= 2) {
@@ -70,13 +72,13 @@ function getData(data, inputValue) {
         }
 
         // สร้างแถว HTML แสดงผลปลาแต่ละชนิด
-        rows += `<tr class="${expired ? 'expired' : ''}">
-          <td>${fish.name}</td>
-          <td>${expired ? 0 : buyQty}</td>
-          <td>${expired ? 0 : itemTotal} บาท</td>
-          <td>${expired ? '-' : itemDiscount + ' บาท'}</td>
-          <td>${formatDate(fish.detail.expired)}${expired ? ' (หมดอายุ)' : ''}</td>
-        </tr>`;
+        rows += `<tr>
+  <td>${fish.name}</td>
+  <td>${buyQty}</td>
+  <td>${itemTotal} บาท</td>
+  <td>${itemDiscount ? itemDiscount + ' บาท' : '-'}</td>
+  <td>${formatDate(fish.detail.expired)}</td>
+</tr>`;
     });
 
 
@@ -86,7 +88,7 @@ function getData(data, inputValue) {
     const change = inputValue - net;
 
     // แสดงผลลัพธ์ทั้งหมด
-    $("#fish-list").html(rows);
+    $("#resultBody").html(rows);
     $("#total").text(total);
     $("#discount").text(discount);
     $("#net").text(net);
