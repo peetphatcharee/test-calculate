@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Document</title>
+    <link rel="stylesheet" href="./style.css" />
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+  </head>
+  <body>
+    <div class="container">
+      <div class="content">
+        <h1>Header</h1>
+
+        <div>
+          <label for="input">Cash:</label>
+          <input type="text" id="input" />
+        </div>
+        <div class="btn-cal">
+          <button onclick="calculate()" type="button" id="calculate">
+            Calculate
+          </button>
+        </div>
+      </div>
+
+      <div id="resultTable" style="display: none">
+        <table>
+          <thead>
+            <tr>
+              <th>ชนิดปลา</th>
+              <th>จำนวน</th>
+              <th>ราคา</th>
+              <th>ส่วนลด</th>
+              <th>วันหมดอายุ</th>
+            </tr>
+          </thead>
+          <tbody id="resultBody"></tbody>
+        </table>
+        <!-- แสดงผลลัพธ์สรุป -->
+        <p>ยอดรวมทั้งหมด: <span id="total">0</span> บาท</p>
+        <p>รวมส่วนลด: <span id="discount">0</span> บาท</p>
+        <p>ยอดสุทธิ: <span id="net">0</span> บาท</p>
+        <p>เงินทอน: <span id="change">0</span> บาท</p>
+      </div>
+
+      <div id="emptyMessage" style="display: block; margin-top: 2rem">
+        No results found.
+      </div>
+    </div>
+    <script src="script.js" defer></script>
+  </body>
+</html>
