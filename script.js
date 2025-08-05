@@ -55,7 +55,7 @@ function getData(data, inputValue) {
 
   // กรองปลาที่ยังไม่หมดอายุและเรียงตามราคาจากมากไปน้อย
   const validFish = data
-    // .filter((f) => new Date(f.detail.expired) >= new Date())
+    .filter((f) => new Date(f.detail.expired) >= new Date())
     .sort((a, b) => b.detail.price - a.detail.price);
 
   const fishArray = [];
