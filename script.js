@@ -1,15 +1,23 @@
 // const api = "https://sopon007.github.io/sample.github.io/test.json";
 const fishes = [
   { name: "ปลาแซลม่อน", detail: { price: 50, quantity: 4, expired: "2025-08-30T00:00:00" } },
-  { name: "ปลาช่อน", detail: { price: 10, quantity: 5, expired: "2025-08-23T00:00:00" } },
-  { name: "ปลาทู", detail: { price: 5, quantity: 5, expired: "2025-08-24T00:00:00" } },
+  { name: "ปลาช่อน", detail: { price: 10, quantity: 5, expired: "2025-07-23T00:00:00" } },
+  { name: "ปลาทู", detail: { price: 5, quantity: 5, expired: "2025-07-24T00:00:00" } },
   { name: "ปลานิล", detail: { price: 20, quantity: 5, expired: "2025-08-20T00:00:00" } },
   { name: "ปลาหมอ", detail: { price: 1, quantity: 10, expired: "2025-08-21T00:00:00" } },
 ];
 function calculate() {
-  const inputValue = parseFloat(document.getElementById("inputValue").value);
-  if (isNaN(inputValue) || inputValue > 1000)
+  const inputValue = parseFloat(document.getElementById("inputValue").value || 0);
+
+  console.log(inputValue);
+  
+  if ( inputValue > 1000) {
+
     return alert("กรุณาใส่จำนวนเงินไม่เกิน 1000 บาท");
+  } else if (isNaN(inputValue) || inputValue <= 0) {
+    return alert("กรุณาใส่จำนวนเงิน");
+  }
+
   getData(fishes, inputValue);
   //   fetch(api)
   //     .then((response) => response.json())
@@ -47,7 +55,7 @@ function getData(data, inputValue) {
 
   // กรองปลาที่ยังไม่หมดอายุและเรียงตามราคาจากมากไปน้อย
   const validFish = data
-    .filter((f) => new Date(f.detail.expired) >= new Date())
+    // .filter((f) => new Date(f.detail.expired) >= new Date())
     .sort((a, b) => b.detail.price - a.detail.price);
 
   const fishArray = [];
